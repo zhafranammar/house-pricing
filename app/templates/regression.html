@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Regresi — Prediksi Harga{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+  <p class="task-eyebrow mb-1">Task 1 · Supervised Learning</p>
+  <h1 class="page-title">Regresi — Prediksi Harga</h1>
+  <p class="page-lead text-muted">Model terpilih: <strong>{{ metrics.model }}</strong> · interpretasi SHAP & prediksi live</p>
+</div>
+
+<section class="ban-grid mb-4" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+  <div class="ban-card">
+    <span class="ban-label">R²</span>
+    <span class="ban-value">{{ "%.3f"|format(metrics.r2) }}</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">MAE</span>
+    <span class="ban-value">${{ "{:,.0f}".format(metrics.mae) }}</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">RMSE</span>
+    <span class="ban-value">${{ "{:,.0f}".format(metrics.rmse) }}</span>
+  </div>
+</section>
+
+{% if model_comparison %}
+<section class="panel mb-4">
+  <h2 class="h5 mb-3">Perbandingan Model (Test Set)</h2>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead>
+        <tr><th>Model</th><th>MAE</th><th>RMSE</th><th>R²</th></tr>
+      </thead>
+      <tbody>
+        {% for row in model_comparison %}
+        <tr class="{% if row.Model == metrics.model %}table-primary{% endif %}">
+          <td>{{ row.Model }}</td>
+          <td>${{ "{:,.0f}".format(row.MAE|float) }}</td>
+          <td>${{ "{:,.0f}".format(row.RMSE|float) }}</td>
+          <td>{{ "%.3f"|format(row.R2|float) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if shap_ready %}
+<section class="panel shap-panel mb-4">
+  <h2 class="h5 mb-2">SHAP — Regresi</h2>
+  <p class="text-muted small mb-3">
+    Kontribusi setiap fitur terhadap prediksi harga. Fitur di atas cenderung menaikkan harga; di bawah menurunkan (pada sampel test).
+  </p>
+  <img src="{{ url_for('static', filename='assets/shap_regression.png') }}" alt="SHAP summary plot regresi" class="shap-img">
+</section>
+{% else %}
+<div class="alert alert-warning">Grafik SHAP regresi belum ada. Jalankan notebook Kaggle dan export <code>shap_regression.png</code> ke <code>app/static/assets/</code>.</div>
+{% endif %}
+
+{% if coef_ready %}
+<section class="panel mb-4">
+  <h2 class="h5 mb-3">Koefisien Linear Regression</h2>
+  <img src="{{ url_for('static', filename='assets/regression_coefficients.png') }}" alt="Koefisien regresi" class="shap-img">
+</section>
+{% endif %}
+
+<section class="row g-4">
+  <div class="col-lg-5">
+    <div class="panel">
+      <h2 class="h5 mb-3">Prediksi Live</h2>
+      {% set action = url_for('tasks.regression_page') %}
+      {% set submit_label = "Prediksi Harga" %}
+      {% set show_cluster_price = false %}
+      {% include "partials/property_form.html" with context %}
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="panel h-100 d-flex flex-column justify-content-center">
+      {% if result %}
+      <p class="text-muted small mb-1">Estimasi harga</p>
+      <p class="task-result-value text-primary mb-0">${{ "{:,.0f}".format(result.price_pred) }}</p>
+      {% elif models_ready %}
+      <p class="text-muted mb-0">Isi form lalu klik <strong>Prediksi Harga</strong>.</p>
+      {% else %}
+      <p class="text-muted mb-0">Upload model ke folder <code>model/</code> untuk mengaktifkan prediksi.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

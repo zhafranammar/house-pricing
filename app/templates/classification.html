@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Klasifikasi — High / Low{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+  <p class="task-eyebrow mb-1">Task 2 · Supervised Learning</p>
+  <h1 class="page-title">Klasifikasi — High / Low</h1>
+  <p class="page-lead text-muted">Model terpilih: <strong>{{ metrics.model }}</strong> · threshold median harga · SHAP</p>
+</div>
+
+<section class="ban-grid mb-4" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+  <div class="ban-card">
+    <span class="ban-label">Accuracy</span>
+    <span class="ban-value">{{ "%.1f"|format(metrics.accuracy * 100) }}%</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">F1-Score</span>
+    <span class="ban-value">{{ "%.3f"|format(metrics.f1) }}</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">Kelas</span>
+    <span class="ban-value" style="font-size:1.25rem">High · Low</span>
+    <span class="ban-sub">berdasarkan median Price</span>
+  </div>
+</section>
+
+{% if model_comparison %}
+<section class="panel mb-4">
+  <h2 class="h5 mb-3">Perbandingan Model (Test Set)</h2>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead>
+        <tr><th>Model</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th></tr>
+      </thead>
+      <tbody>
+        {% for row in model_comparison %}
+        <tr class="{% if row.Model == metrics.model %}table-primary{% endif %}">
+          <td>{{ row.Model }}</td>
+          <td>{{ "%.1f"|format(row.Accuracy|float * 100) }}%</td>
+          <td>{{ "%.3f"|format(row.Precision|float) }}</td>
+          <td>{{ "%.3f"|format(row.Recall|float) }}</td>
+          <td>{{ "%.3f"|format(row.F1|float) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if shap_ready %}
+<section class="panel shap-panel mb-4">
+  <h2 class="h5 mb-2">SHAP — Klasifikasi</h2>
+  <p class="text-muted small mb-3">
+    Fitur yang paling membedakan rumah kategori <strong>High</strong> vs <strong>Low</strong> menurut model {{ metrics.model }}.
+  </p>
+  <img src="{{ url_for('static', filename='assets/shap_classification.png') }}" alt="SHAP summary plot klasifikasi" class="shap-img">
+</section>
+{% else %}
+<div class="alert alert-warning">Grafik SHAP klasifikasi belum ada. Export <code>shap_classification.png</code> dari notebook.</div>
+{% endif %}
+
+<section class="row g-4">
+  <div class="col-lg-5">
+    <div class="panel">
+      <h2 class="h5 mb-3">Prediksi Live</h2>
+      {% set action = url_for('tasks.classification_page') %}
+      {% set submit_label = "Prediksi Kategori" %}
+      {% set show_cluster_price = false %}
+      {% include "partials/property_form.html" with context %}
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="panel h-100 d-flex flex-column justify-content-center">
+      {% if result %}
+      <p class="text-muted small mb-1">Kategori harga</p>
+      <p class="task-result-value mb-1">{{ result.category }}</p>
+      {% if result.proba %}
+      <p class="text-muted mb-0">Confidence: {{ "%.1f"|format(result.proba * 100) }}%</p>
+      {% endif %}
+      {% elif models_ready %}
+      <p class="text-muted mb-0">Isi form lalu klik <strong>Prediksi Kategori</strong>.</p>
+      {% else %}
+      <p class="text-muted mb-0">Upload model ke folder <code>model/</code> untuk mengaktifkan prediksi.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

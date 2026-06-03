@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}About — {{ title }}{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+  <h1 class="page-title">About</h1>
+  <p class="page-lead text-muted">{{ subtitle }}</p>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-7">
+    <div class="panel">
+      <h2 class="h5">Tentang Proyek</h2>
+      <p>{{ description }}</p>
+      <h2 class="h5 mt-4">Aplikasi Web</h2>
+      <p>
+        Aplikasi Flask: <strong>dataset dashboard</strong> (EDA interaktif) dan tiga halaman task —
+        <a href="{{ url_for('tasks.regression_page') }}">regresi</a>,
+        <a href="{{ url_for('tasks.classification_page') }}">klasifikasi</a>,
+        <a href="{{ url_for('tasks.clustering_page') }}">clustering</a> —
+        masing-masing menampilkan metrik & SHAP; halaman
+        <a href="{{ url_for('predict.prediction_page') }}">Prediction</a> menggabungkan ketiga form (tab) plus penjelasan fitur.
+      </p>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="panel">
+      <h2 class="h5">Mata Kuliah</h2>
+      <dl class="row mb-0 small">
+        <dt class="col-5">Mata Kuliah</dt><dd class="col-7">{{ course.mata_kuliah }}</dd>
+        <dt class="col-5">Program</dt><dd class="col-7">{{ course.program }}</dd>
+        <dt class="col-5">Tahun</dt><dd class="col-7">{{ course.tahun_akademik }}</dd>
+        <dt class="col-5">Dosen</dt><dd class="col-7">{{ course.dosen }}</dd>
+      </dl>
+    </div>
+    <div class="panel mt-4">
+      <h2 class="h5">Anggota</h2>
+      {% for m in team %}
+      <div class="member-row">
+        <strong>{{ m.nama }}</strong>
+        <span class="text-muted d-block small">NIM {{ m.nim }} · {{ m.peran }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

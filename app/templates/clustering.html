@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Clustering — K-Means{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+  <p class="task-eyebrow mb-1">Task 3 · Unsupervised Learning</p>
+  <h1 class="page-title">Clustering — K-Means</h1>
+  <p class="page-lead text-muted">{{ metrics.model }} · k={{ metrics.n_clusters }} · fitur termasuk harga (prediksi atau manual)</p>
+</div>
+
+<section class="ban-grid mb-4" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+  <div class="ban-card">
+    <span class="ban-label">Silhouette</span>
+    <span class="ban-value">{{ "%.3f"|format(metrics.silhouette) }}</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">Jumlah Cluster</span>
+    <span class="ban-value">{{ metrics.n_clusters }}</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">Algoritma</span>
+    <span class="ban-value" style="font-size:1.1rem">{{ metrics.model }}</span>
+  </div>
+</section>
+
+{% if scatter_ready %}
+<section class="panel mb-4">
+  <h2 class="h5 mb-3">Visualisasi Cluster (PCA 2D)</h2>
+  <p class="text-muted small mb-3">Proyeksi 2D data terstandarisasi — warna = label cluster hasil K-Means.</p>
+  <img src="{{ url_for('static', filename='assets/cluster_scatter.png') }}" alt="Scatter cluster" class="shap-img">
+</section>
+{% endif %}
+
+{% if cluster_profiles %}
+<section class="panel mb-4">
+  <h2 class="h5 mb-3">Profil Rata-rata per Cluster</h2>
+  <div class="table-responsive">
+    <table class="table table-sm table-hover mb-0">
+      <thead>
+        <tr>
+          <th>Cluster</th>
+          <th>SquareFeet</th>
+          <th>Bedrooms</th>
+          <th>Bathrooms</th>
+          <th>HouseAge</th>
+          <th>Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in cluster_profiles %}
+        <tr>
+          <td><strong>{{ row.Cluster }}</strong></td>
+          <td>{{ "{:,.0f}".format(row.SquareFeet|float) }}</td>
+          <td>{{ "%.2f"|format(row.Bedrooms|float) }}</td>
+          <td>{{ "%.2f"|format(row.Bathrooms|float) }}</td>
+          <td>{{ "%.1f"|format(row.HouseAge|float) }}</td>
+          <td>${{ "{:,.0f}".format(row.Price|float) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+<section class="row g-4">
+  <div class="col-lg-5">
+    <div class="panel">
+      <h2 class="h5 mb-3">Assign Cluster Live</h2>
+      {% set action = url_for('tasks.clustering_page') %}
+      {% set submit_label = "Lihat Hasil" %}
+      {% set show_cluster_price = true %}
+      {% include "partials/property_form.html" with context %}
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="panel h-100 d-flex flex-column justify-content-center">
+      {% if result %}
+      <p class="text-muted small mb-1">Cluster ID</p>
+      <p class="task-result-value mb-2">{{ result.cluster_id }}</p>
+      <p class="text-muted small mb-1">Harga dipakai untuk fitur Price</p>
+      <p class="fs-5 fw-semibold text-primary mb-0">${{ "{:,.0f}".format(result.cluster_price) }}</p>
+      {% elif models_ready %}
+      <p class="text-muted mb-0">Isi form lalu klik <strong>Tentukan Cluster</strong>.</p>
+      {% else %}
+      <p class="text-muted mb-0">Upload model ke folder <code>model/</code> untuk mengaktifkan prediksi.</p>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

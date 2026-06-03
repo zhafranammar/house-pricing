@@ -1,0 +1,34 @@
+{# form, neighborhoods, action, show_cluster_price=False, submit_label #}
+<form method="post" action="{{ action }}">
+  <div class="mb-3">
+    <label class="form-label">Luas (sq ft)</label>
+    <input type="number" name="square_feet" class="form-control" value="{{ form.square_feet }}" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Bedrooms / Bathrooms</label>
+    <div class="row g-2">
+      <div class="col-6"><input type="number" name="bedrooms" class="form-control" value="{{ form.bedrooms }}" required></div>
+      <div class="col-6"><input type="number" name="bathrooms" class="form-control" value="{{ form.bathrooms }}" required></div>
+    </div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Tahun dibangun</label>
+    <input type="number" name="year_built" class="form-control" value="{{ form.year_built }}" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Neighborhood</label>
+    <select name="neighborhood" class="form-select">
+      {% for n in neighborhoods %}
+      <option value="{{ n }}" {% if form.neighborhood == n %}selected{% endif %}>{{ n }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% if show_cluster_price %}
+  <div class="mb-3">
+    <label class="form-label">Harga (USD) <span class="text-danger">*</span></label>
+    <input type="number" name="manual_price" class="form-control" value="{{ form.manual_price|int }}" min="1" step="1" required>
+    <div class="form-text">Wajib — digunakan sebagai fitur Price pada model K-Means.</div>
+  </div>
+  {% endif %}
+  <button type="submit" class="btn btn-primary w-100" {% if not models_ready %}disabled{% endif %}>{{ submit_label }}</button>
+</form>

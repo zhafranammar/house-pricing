@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Prediction — Semua Model{% endblock %}
+
+{% block content %}
+<div class="page-header mb-4">
+  <h1 class="page-title">Prediction</h1>
+  <p class="page-lead text-muted mb-0">Tiga tab form — klik <strong>Lihat Hasil</strong> untuk prediksi, penjelasan fitur, dan SHAP sesuai task</p>
+</div>
+
+{% if models_ready %}
+<div class="ban-grid mb-4" style="grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));">
+  <div class="ban-card">
+    <span class="ban-label">Regresi</span>
+    <span class="ban-value" style="font-size:1rem">{{ metrics.regression.model }}</span>
+    <span class="ban-sub">R² {{ "%.3f"|format(metrics.regression.r2) }}</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">Klasifikasi</span>
+    <span class="ban-value" style="font-size:1rem">{{ metrics.classification.model }}</span>
+    <span class="ban-sub">Acc {{ "%.1f"|format(metrics.classification.accuracy * 100) }}%</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">Cluster</span>
+    <span class="ban-value" style="font-size:1rem">k={{ metrics.clustering.n_clusters }}</span>
+    <span class="ban-sub">Silhouette {{ "%.3f"|format(metrics.clustering.silhouette) }}</span>
+  </div>
+</div>
+{% endif %}
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="panel prediction-panel">
+      <ul class="nav nav-tabs prediction-tabs" id="predTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link {% if active_tab == 'regression' %}active{% endif %}" id="tab-reg" data-bs-toggle="tab" data-bs-target="#pane-reg" data-task="regression" type="button" role="tab">Regresi</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link {% if active_tab == 'classification' %}active{% endif %}" id="tab-clf" data-bs-toggle="tab" data-bs-target="#pane-clf" data-task="classification" type="button" role="tab">Klasifikasi</button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link {% if active_tab == 'clustering' %}active{% endif %}" id="tab-clu" data-bs-toggle="tab" data-bs-target="#pane-clu" data-task="clustering" type="button" role="tab">Clustering</button>
+        </li>
+      </ul>
+
+      <div class="tab-content pt-3" id="predTabContent">
+        <div class="tab-pane fade {% if active_tab == 'regression' %}show active{% endif %}" id="pane-reg" role="tabpanel">
+          <form method="post" action="{{ url_for('predict.prediction_page') }}?tab=regression" class="pred-form" data-task="regression">
+            <input type="hidden" name="task" value="regression">
+            {% set id_prefix = "reg_" %}
+            {% include "partials/property_fields.html" with context %}
+            <button type="submit" class="btn btn-primary w-100" {% if not models_ready %}disabled{% endif %}>Lihat Hasil</button>
+          </form>
+        </div>
+
+        <div class="tab-pane fade {% if active_tab == 'classification' %}show active{% endif %}" id="pane-clf" role="tabpanel">
+          <form method="post" action="{{ url_for('predict.prediction_page') }}?tab=classification" class="pred-form" data-task="classification">
+            <input type="hidden" name="task" value="classification">
+            {% set id_prefix = "clf_" %}
+            {% include "partials/property_fields.html" with context %}
+            <button type="submit" class="btn btn-primary w-100" {% if not models_ready %}disabled{% endif %}>Lihat Hasil</button>
+          </form>
+        </div>
+
+        <div class="tab-pane fade {% if active_tab == 'clustering' %}show active{% endif %}" id="pane-clu" role="tabpanel">
+          <form method="post" action="{{ url_for('predict.prediction_page') }}?tab=clustering" class="pred-form" data-task="clustering">
+            <input type="hidden" name="task" value="clustering">
+            {% set id_prefix = "clu_" %}
+            {% include "partials/property_fields.html" with context %}
+            <div class="mb-3">
+              <label class="form-label" for="clu_manual_price">Harga (USD) <span class="text-danger">*</span></label>
+              <input type="number" id="clu_manual_price" name="manual_price" class="form-control pred-input" data-field="manual_price" value="{{ form.manual_price|int }}" min="1" step="1" required>
+              <div class="form-text">Wajib diisi — fitur Price pada K-Means.</div>
+            </div>
+            <button type="submit" class="btn btn-primary w-100" {% if not models_ready %}disabled{% endif %}>Lihat Hasil</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6" id="prediction-results-col">
+    {% if show_results and result %}
+    <div class="panel mb-3 result-panel" id="result-panel">
+      <h2 class="h6 text-muted mb-2">Hasil prediksi</h2>
+      {% if active_tab == 'regression' %}
+      <p class="prediction-result-value text-primary mb-1">${{ "{:,.0f}".format(result.price_pred) }}</p>
+      <p class="small text-muted mb-0">Estimasi harga ({{ metrics.regression.model }})</p>
+      {% elif active_tab == 'classification' %}
+      <p class="prediction-result-value mb-1">{{ result.category }}</p>
+      {% if result.proba %}<p class="small text-muted mb-0">Confidence {{ "%.1f"|format(result.proba * 100) }}%</p>{% endif %}
+      {% else %}
+      <p class="prediction-result-value mb-1">Cluster {{ result.cluster_id }}</p>
+      <p class="small text-muted mb-0">Harga input: ${{ "{:,.0f}".format(result.cluster_price) }}</p>
+      {% endif %}
+      {% if explanations and explanations.summary %}
+      <p class="mt-3 mb-0 small">{{ explanations.summary }}</p>
+      {% endif %}
+    </div>
+
+    {% if shap_image %}
+    <div class="panel shap-panel mb-3" id="shap-panel">
+      <h2 class="h6 mb-2">SHAP — {% if active_tab == 'regression' %}Regresi{% else %}Klasifikasi{% endif %}</h2>
+      <p class="small text-muted mb-3">Pentingnya fitur pada model (hasil training Kaggle) — relevan untuk task ini.</p>
+      <img src="{{ url_for('static', filename='assets/' + shap_image) }}" alt="SHAP plot" class="shap-img">
+    </div>
+    {% elif active_tab == 'clustering' and viz_image %}
+    <div class="panel shap-panel mb-3" id="viz-panel">
+      <h2 class="h6 mb-2">Visualisasi Cluster</h2>
+      <p class="small text-muted mb-3">Proyeksi 2D K-Means (clustering tidak memakai plot SHAP).</p>
+      <img src="{{ url_for('static', filename='assets/' + viz_image) }}" alt="Cluster scatter" class="shap-img">
+    </div>
+    {% endif %}
+
+    {% if explanations %}
+    <div class="panel explain-panel" id="explain-panel">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <h2 class="h6 mb-0">Mengapa fitur ini berpengaruh?</h2>
+        <span class="badge bg-primary-subtle text-primary explain-task-badge">
+          {% if active_tab == 'regression' %}Regresi{% elif active_tab == 'classification' %}Klasifikasi{% else %}Clustering{% endif %}
+        </span>
+      </div>
+      <p class="small text-muted mb-3">{{ explanations.shap_hint }}</p>
+      <div class="explain-list">
+        {% for f in explanations.features %}
+        <article class="explain-card" data-key="{{ f.key }}">
+          <h3 class="explain-card-title">{{ f.label }}{% if f.computed %} <span class="text-muted fw-normal">({{ f.computed }})</span>{% endif %}</h3>
+          <p class="explain-card-body small mb-1">{{ f.general }}</p>
+          <p class="explain-card-impact small mb-1"><strong>Dampak pada task ini:</strong> {{ f.task_impact }}</p>
+          {% if f.insight %}
+          <p class="explain-card-insight small mb-0"><strong>Untuk input Anda:</strong> {{ f.insight }}</p>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="panel prediction-placeholder" id="prediction-placeholder">
+      <div class="placeholder-icon mb-2">◇</div>
+      <p class="mb-1 fw-semibold">Belum ada hasil</p>
+      <p class="text-muted small mb-0">Isi form di tab aktif, lalu tekan <strong>Lihat Hasil</strong>. SHAP (regresi/klasifikasi) dan penjelasan fitur akan tampil di sini.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.PREDICTION_INIT = {
+    activeTab: {{ active_tab|tojson }},
+    form: {{ form|tojson }},
+    showResults: {{ show_results|tojson }},
+    explainUrl: {{ url_for('predict.api_explain')|tojson }}
+  };
+</script>
+<script src="{{ url_for('static', filename='js/prediction.js') }}"></script>
+{% endblock %}

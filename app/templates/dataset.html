@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% block title %}Dataset Overview{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4">
+  <div>
+    <h1 class="page-title">Dataset Overview</h1>
+    <p class="page-lead text-muted mb-0">Dashboard eksplorasi — KPI & grafik interaktif (metrik/SHAP ada di menu Regresi, Klasifikasi, Clustering)</p>
+  </div>
+  {% if models_ready %}
+  <span class="badge rounded-pill text-bg-success">Model loaded</span>
+  {% endif %}
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% else %}
+
+<section class="ban-grid mb-4">
+  <div class="ban-card">
+    <span class="ban-label">Total Baris</span>
+    <span class="ban-value">{{ "{:,}".format(kpis.total_rows) }}</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">Rata-rata Harga</span>
+    <span class="ban-value">${{ "{:,.0f}".format(kpis.avg_price) }}</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">Median Harga</span>
+    <span class="ban-value">${{ "{:,.0f}".format(kpis.median_price) }}</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">Rata-rata Luas</span>
+    <span class="ban-value">{{ "{:,.0f}".format(kpis.avg_sqft) }} <small>sq ft</small></span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">Neighborhood</span>
+    <span class="ban-value">{{ kpis.neighborhoods }}</span>
+    <span class="ban-sub">tipe lokasi</span>
+  </div>
+  <div class="ban-card">
+    <span class="ban-label">Tahun Bangun</span>
+    <span class="ban-value">{{ kpis.year_min }}–{{ kpis.year_max }}</span>
+  </div>
+</section>
+
+<section class="panel mb-4">
+  <div class="panel-head">
+    <h2 class="h5 mb-0">Grafik Utama</h2>
+    <span class="text-muted small">Sesuaikan sumbu, tipe chart, filter & split</span>
+  </div>
+  <div class="chart-controls row g-2 mb-3">
+    <div class="col-6 col-md-2">
+      <label class="form-label small">Sumbu X</label>
+      <select id="ctrl-x" class="form-select form-select-sm">
+        {% for c in numeric_cols + categorical_cols %}
+        <option value="{{ c }}" {% if c == 'SquareFeet' %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small">Sumbu Y</label>
+      <select id="ctrl-y" class="form-select form-select-sm">
+        {% for c in numeric_cols %}
+        <option value="{{ c }}" {% if c == 'Price' %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small">Warna / Kelompok</label>
+      <select id="ctrl-color" class="form-select form-select-sm">
+        <option value="" selected>— Tidak ada —</option>
+        {% for c in categorical_cols %}
+        <option value="{{ c }}">{{ c }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small">Tipe Chart</label>
+      <select id="ctrl-chart" class="form-select form-select-sm">
+        {% for t in chart_types %}
+        <option value="{{ t }}" {% if t == 'scatter' %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small">Filter Neighborhood</label>
+      <select id="ctrl-neighborhood" class="form-select form-select-sm">
+        <option value="all">Semua</option>
+        <option value="Rural">Rural</option>
+        <option value="Suburb">Suburb</option>
+        <option value="Urban">Urban</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-2">
+      <label class="form-label small">Data Split</label>
+      <select id="ctrl-split" class="form-select form-select-sm">
+        <option value="none">Tanpa split</option>
+        <option value="neighborhood">Per neighborhood</option>
+        <option value="train_test">Train / Test 80-20</option>
+      </select>
+    </div>
+    <div class="col-6 col-md-3">
+      <label class="form-label small">Sample (max baris)</label>
+      <input type="range" id="ctrl-sample" class="form-range" min="500" max="15000" step="500" value="8000">
+      <span id="sample-label" class="small text-muted">8.000</span>
+    </div>
+    <div class="col-6 col-md-2 d-flex align-items-end">
+      <button type="button" id="btn-refresh" class="btn btn-primary btn-sm w-100">Terapkan</button>
+    </div>
+  </div>
+  <div id="chart-loading" class="chart-loading d-none">Memuat grafik…</div>
+  <p id="main-chart-title" class="chart-title mb-2"></p>
+  <div id="main-chart" class="chart-main"></div>
+</section>
+
+<section class="panel mb-4 task-links-panel">
+  <h2 class="h5 mb-3">Model & Analisis per Task</h2>
+  <div class="row g-3">
+    <div class="col-md-3">
+      <a href="{{ url_for('predict.prediction_page') }}" class="task-link-card">
+        <span class="task-link-label">Prediction</span>
+        <span class="task-link-title">3 tab · penjelasan fitur</span>
+        <span class="task-link-meta">Regresi + klasifikasi + cluster</span>
+      </a>
+    </div>
+    <div class="col-md-3">
+      <a href="{{ url_for('tasks.regression_page') }}" class="task-link-card">
+        <span class="task-link-label">Regresi</span>
+        <span class="task-link-title">Prediksi harga + SHAP</span>
+        {% if models_ready %}<span class="task-link-meta">R² {{ "%.3f"|format(metrics.regression.r2) }}</span>{% endif %}
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="{{ url_for('tasks.classification_page') }}" class="task-link-card">
+        <span class="task-link-label">Klasifikasi</span>
+        <span class="task-link-title">High / Low + SHAP</span>
+        {% if models_ready %}<span class="task-link-meta">Acc {{ "%.1f"|format(metrics.classification.accuracy * 100) }}%</span>{% endif %}
+      </a>
+    </div>
+    <div class="col-md-3">
+      <a href="{{ url_for('tasks.clustering_page') }}" class="task-link-card">
+        <span class="task-link-label">Clustering</span>
+        <span class="task-link-title">K-Means & profil cluster</span>
+        {% if models_ready %}<span class="task-link-meta">Silhouette {{ "%.3f"|format(metrics.clustering.silhouette) }}</span>{% endif %}
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="mb-4">
+  <h2 class="h5 mb-3">Breakdown per Fitur</h2>
+  <div class="feature-grid">
+    {% for f in features %}
+    <div class="feature-card panel">
+      <div class="feature-card-head">
+        <h3 class="h6 mb-0">{{ f.name }}</h3>
+        <span class="badge bg-secondary-subtle text-secondary">{{ f.type }}</span>
+      </div>
+      {% if f.type == 'numeric' %}
+      <div class="feature-stats">
+        <span>μ {{ f.mean }}</span>
+        <span>σ {{ f.std }}</span>
+        <span>min {{ f.min }}</span>
+        <span>max {{ f.max }}</span>
+      </div>
+      {% else %}
+      <div class="feature-stats">
+        <span>Top: {{ f.top_category }} ({{ f.top_count }})</span>
+        <span>{{ f.unique }} kategori</span>
+      </div>
+      {% endif %}
+      <div id="feat-{{ loop.index }}" class="feature-chart" data-col="{{ f.name }}"></div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if not error %}
+<script>
+(function () {
+  if (typeof Plotly === 'undefined') {
+    document.querySelectorAll('.chart-main, .feature-chart').forEach(el => {
+      el.innerHTML = '<p class="text-danger p-3">Plotly gagal dimuat. Periksa koneksi internet.</p>';
+    });
+    return;
+  }
+
+  const chartUrl = "{{ url_for('dataset.api_chart') }}";
+  const featureUrl = "{{ url_for('dataset.api_feature_chart', col='__COL__') }}";
+
+  const plotlyConfig = {
+    responsive: true,
+    displayModeBar: true,
+    displaylogo: false,
+    modeBarButtonsToRemove: ['lasso2d', 'select2d'],
+  };
+
+  function plotFig(elId, fig) {
+    const el = document.getElementById(elId);
+    if (!el || !fig || !fig.data) return;
+    const layout = Object.assign({}, fig.layout || {}, { autosize: true });
+    if (layout.title) delete layout.title;
+    Plotly.newPlot(el, fig.data, layout, plotlyConfig);
+    Plotly.Plots.resize(el);
+  }
+
+  function setMainChartTitle() {
+    const x = document.getElementById('ctrl-x').value;
+    const y = document.getElementById('ctrl-y').value;
+    const chart = document.getElementById('ctrl-chart').value;
+    const el = document.getElementById('main-chart-title');
+    if (!el) return;
+    const labels = {
+      scatter: `${y} vs ${x}`,
+      histogram: `Distribusi ${x}`,
+      box: `Boxplot ${y}`,
+      violin: `Violin ${y}`,
+      bar: `Rata-rata ${y}`,
+      line: `Tren ${y} terhadap ${x}`,
+    };
+    el.textContent = labels[chart] || `${y} vs ${x}`;
+  }
+
+  async function loadMainChart() {
+    const loading = document.getElementById('chart-loading');
+    loading.classList.remove('d-none');
+    const params = new URLSearchParams({
+      x: document.getElementById('ctrl-x').value,
+      y: document.getElementById('ctrl-y').value,
+      color: document.getElementById('ctrl-color').value,
+      chart: document.getElementById('ctrl-chart').value,
+      neighborhood: document.getElementById('ctrl-neighborhood').value,
+      split: document.getElementById('ctrl-split').value,
+      sample: document.getElementById('ctrl-sample').value,
+    });
+    try {
+      const res = await fetch(chartUrl + '?' + params);
+      const fig = await res.json();
+      if (!res.ok || fig.error) throw new Error(fig.error || res.statusText);
+      if (!fig.data || !fig.data.length) throw new Error('Data grafik kosong');
+      setMainChartTitle();
+      plotFig('main-chart', fig);
+    } catch (e) {
+      document.getElementById('main-chart').innerHTML =
+        '<p class="text-danger p-3 mb-0">Gagal memuat: ' + e.message + '</p>';
+    }
+    loading.classList.add('d-none');
+  }
+
+  async function loadFeatureCharts() {
+    const cards = document.querySelectorAll('.feature-chart[data-col]');
+    for (const card of cards) {
+      const col = card.dataset.col;
+      const id = card.id;
+      try {
+        const url = featureUrl.replace('__COL__', encodeURIComponent(col));
+        const res = await fetch(url);
+        const fig = await res.json();
+        if (!res.ok || fig.error) throw new Error(fig.error);
+        plotFig(id, fig);
+      } catch (e) {
+        card.innerHTML = '<p class="text-danger small p-2 mb-0">' + e.message + '</p>';
+      }
+    }
+  }
+
+  document.getElementById('btn-refresh').addEventListener('click', loadMainChart);
+  document.getElementById('ctrl-sample').addEventListener('input', (e) => {
+    document.getElementById('sample-label').textContent =
+      Number(e.target.value).toLocaleString('id-ID');
+  });
+  ['ctrl-x', 'ctrl-y', 'ctrl-color', 'ctrl-chart', 'ctrl-neighborhood', 'ctrl-split'].forEach(id => {
+    document.getElementById(id).addEventListener('change', () => {
+      setMainChartTitle();
+      loadMainChart();
+    });
+  });
+
+  setMainChartTitle();
+  loadMainChart();
+  loadFeatureCharts();
+})();
+</script>
+{% endif %}
+{% endblock %}

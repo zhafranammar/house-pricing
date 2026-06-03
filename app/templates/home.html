@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block main_class %}landing-main{% endblock %}
+
+{% block content %}
+<section class="landing-hero">
+  <div class="container">
+    <p class="landing-eyebrow">UAS Data Mining · 2026</p>
+    <h1 class="landing-title">{{ title }}</h1>
+    <p class="landing-subtitle">{{ subtitle }}</p>
+    <p class="landing-desc">{{ description }}</p>
+    <div class="landing-actions">
+      <a href="{{ url_for('dataset.dataset_dashboard') }}" class="btn btn-primary btn-lg px-4">Dashboard</a>
+      <a href="{{ url_for('predict.prediction_page') }}" class="btn btn-outline-light btn-lg px-4 ms-2">Prediction</a>
+      <a href="{{ url_for('main.about') }}" class="btn btn-outline-light btn-lg px-4">Tentang Proyek</a>
+    </div>
+  </div>
+</section>
+
+<section class="container py-5">
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="landing-card">
+        <h3>Dataset & Model</h3>
+        <p>Dashboard EDA + tiga halaman task (regresi, klasifikasi, clustering) dengan SHAP.</p>
+        <a href="{{ url_for('dataset.dataset_dashboard') }}" class="stretched-link">Lihat dashboard →</a>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="landing-card">
+        <h3>50.000+ Record</h3>
+        <p>Housing price dataset: luas, kamar, neighborhood, tahun bangun, dan harga.</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="landing-card">
+        <h3>Tim Proyek</h3>
+        <ul class="list-unstyled mb-0 small">
+          {% for m in team %}
+          <li><strong>{{ m.nama }}</strong> — {{ m.peran }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

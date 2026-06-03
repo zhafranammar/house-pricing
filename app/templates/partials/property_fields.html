@@ -1,0 +1,29 @@
+{# form, neighborhoods, id_prefix="" — field names only, no form wrapper #}
+{% set p = id_prefix %}
+<div class="mb-3">
+  <label class="form-label" for="{{ p }}square_feet">Luas (sq ft)</label>
+  <input type="number" id="{{ p }}square_feet" name="square_feet" class="form-control pred-input" data-field="square_feet" value="{{ form.square_feet }}" required>
+</div>
+<div class="mb-3">
+  <label class="form-label">Bedrooms / Bathrooms</label>
+  <div class="row g-2">
+    <div class="col-6">
+      <input type="number" id="{{ p }}bedrooms" name="bedrooms" class="form-control pred-input" data-field="bedrooms" value="{{ form.bedrooms }}" required>
+    </div>
+    <div class="col-6">
+      <input type="number" id="{{ p }}bathrooms" name="bathrooms" class="form-control pred-input" data-field="bathrooms" value="{{ form.bathrooms }}" required>
+    </div>
+  </div>
+</div>
+<div class="mb-3">
+  <label class="form-label" for="{{ p }}year_built">Tahun dibangun</label>
+  <input type="number" id="{{ p }}year_built" name="year_built" class="form-control pred-input" data-field="year_built" value="{{ form.year_built }}" required>
+</div>
+<div class="mb-3">
+  <label class="form-label" for="{{ p }}neighborhood">Neighborhood</label>
+  <select id="{{ p }}neighborhood" name="neighborhood" class="form-select pred-input" data-field="neighborhood">
+    {% for n in neighborhoods %}
+    <option value="{{ n }}" {% if form.neighborhood == n %}selected{% endif %}>{{ n }}</option>
+    {% endfor %}
+  </select>
+</div>
